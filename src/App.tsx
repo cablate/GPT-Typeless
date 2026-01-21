@@ -2,6 +2,19 @@ import { useState, useEffect } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
 import "./App.css";
+import {
+  MicIcon,
+  StopIcon,
+  SettingsIcon,
+  ClockIcon,
+  DocumentIcon,
+  CopyIcon,
+  CheckIcon,
+  CloseIcon,
+  TrashIcon,
+  LightbulbIcon,
+} from "./components/Icons";
+import { Modal } from "./components/Modal";
 
 // 類型定義
 interface AudioDevice {
@@ -48,6 +61,7 @@ function App() {
   const [error, setError] = useState("");
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [tempToken, setTempToken] = useState("");
+  const [transcriptionResult, setTranscriptionResult] = useState<string | null>(null);
 
   // 流程步驟狀態
   const [steps, setSteps] = useState<Step[]>([
@@ -78,6 +92,7 @@ function App() {
     ]);
     setStartTime(null);  // 不在錄音開始時設定時間
     setElapsed(0);
+    setTranscriptionResult(null);
   };
 
   // 載入設備列表
@@ -198,6 +213,7 @@ function App() {
 
         updateStep("transcribe", "completed");
         updateStep("done", "completed");
+        setTranscriptionResult(result);
         setStatus(`✓ 轉錄完成！已複製到剪貼簿 (耗時 ${formatTime(finalTime)})`);
         console.log("轉錄結果:", result);
       } catch (transcribeErr) {
@@ -255,12 +271,13 @@ function App() {
   return (
     <div className="app">
       <header className="app-header">
-        <h1>🎙️ GPTService</h1>
+        <h1>GPTService</h1>
         <button
           className="settings-btn"
           onClick={() => setIsSettingsOpen(!isSettingsOpen)}
         >
-          ⚙️ 設定
+          <SettingsIcon />
+          <span>設定</span>
         </button>
       </header>
 
@@ -294,11 +311,22 @@ function App() {
             className={`record-btn ${recordingStatus.is_recording ? "recording" : ""}`}
             onClick={toggleRecording}
           >
-            {recordingStatus.is_recording ? "⏹️ 停止錄音" : "🎙️ 開始錄音"}
+            {recordingStatus.is_recording ? (
+              <>
+                <StopIcon />
+                停止錄音
+              </>
+            ) : (
+              <>
+                <MicIcon />
+                開始錄音
+              </>
+            )}
           </button>
 
           <p className="hotkey-hint">
-            💡 快捷鍵：{config.hotkey}
+            <LightbulbIcon />
+            快捷鍵：{config.hotkey}
           </p>
         </section>
 
@@ -315,13 +343,14 @@ function App() {
             {/* 經過時間顯示 */}
             {startTime && (
               <div className="elapsed-time">
-                ⏱️ 已用時: {formatTime(elapsed)}
+                <ClockIcon />
+                已用時: {formatTime(elapsed)}
               </div>
             )}
             {steps.map((step) => (
               <div key={step.id} className={`status-step ${step.status}`}>
                 <span className="status-step-icon">
-                  {step.status === "completed" ? "✓" : step.status === "active" ? "⟳" : "○"}
+                  {step.status === "completed" ? <CheckIcon /> : step.status === "active" ? "⟳" : "○"}
                 </span>
                 <span>{step.label}</span>
               </div>
@@ -333,64 +362,83 @@ function App() {
         {error && (
           <section className="error-section">
             <p className="error-message">{error}</p>
-            <button onClick={() => setError("")}>✕</button>
+            <button onClick={() => setError("")}>
+              <CloseIcon />
+            </button>
           </section>
         )}
 
-        {/* 設定面板 */}
-        {isSettingsOpen && (
-          <section className="settings-section">
-            <h2>設定</h2>
-
-            <div className="form-group">
-              <label htmlFor="token-input">ChatGPT Token：</label>
-              <input
-                id="token-input"
-                type="password"
-                value={tempToken}
-                onChange={(e) => setTempToken(e.target.value)}
-                placeholder="輸入您的 ChatGPT Token"
-              />
-            </div>
-
-            <div className="form-group">
-              <label htmlFor="hotkey-input">快捷鍵：</label>
-              <input
-                id="hotkey-input"
-                type="text"
-                value={config.hotkey}
-                onChange={(e) => setConfig({ ...config, hotkey: e.target.value })}
-                placeholder="例如：Ctrl+Shift+R"
-              />
-            </div>
-
-            <div className="settings-actions">
-              <button className="save-btn" onClick={saveConfig}>
-                儲存設定
-              </button>
+        {/* 轉錄結果 */}
+        {transcriptionResult && (
+          <section className="transcription-section">
+            <div className="transcription-header">
+              <h3><DocumentIcon /> 轉錄結果</h3>
               <button
-                className="cancel-btn"
+                className="copy-result-btn"
                 onClick={() => {
-                  setIsSettingsOpen(false);
-                  setTempToken(config.chatgpt_token);
+                  navigator.clipboard.writeText(transcriptionResult);
+                  setStatus("已複製到剪貼簿");
                 }}
               >
-                取消
+                <CopyIcon />
+                複製
               </button>
             </div>
-
-            <div className="cleanup-section">
-              <h3>維護</h3>
-              <button className="cleanup-btn" onClick={cleanupOldRecordings}>
-                🗑️ 清理 7 天前的錄音
-              </button>
+            <div className="transcription-content">
+              {transcriptionResult}
             </div>
           </section>
         )}
+
+        {/* 設定 Modal */}
+        <Modal
+          isOpen={isSettingsOpen}
+          onClose={() => {
+            setIsSettingsOpen(false);
+            setTempToken(config.chatgpt_token);
+          }}
+          title="設定"
+        >
+          <div className="modal-form-group">
+            <label htmlFor="token-input">ChatGPT Token：</label>
+            <input
+              id="token-input"
+              type="password"
+              value={tempToken}
+              onChange={(e) => setTempToken(e.target.value)}
+              placeholder="輸入您的 ChatGPT Token"
+            />
+          </div>
+
+          <div className="modal-form-group">
+            <label htmlFor="hotkey-input">快捷鍵：</label>
+            <input
+              id="hotkey-input"
+              type="text"
+              value={config.hotkey}
+              onChange={(e) => setConfig({ ...config, hotkey: e.target.value })}
+              placeholder="例如：Ctrl+Shift+R"
+            />
+          </div>
+
+          <div className="modal-actions">
+            <button className="modal-save-btn" onClick={saveConfig}>
+              儲存設定
+            </button>
+          </div>
+
+          <div className="modal-cleanup-section">
+            <h3>維護</h3>
+            <button className="modal-cleanup-btn" onClick={cleanupOldRecordings}>
+              <TrashIcon />
+              清理 7 天前的錄音
+            </button>
+          </div>
+        </Modal>
       </main>
 
       <footer className="app-footer">
-        <p>GPTService v0.1.0 - 語音轉文字工具</p>
+        <p>GPTService v0.1.0</p>
       </footer>
     </div>
   );
