@@ -41,6 +41,13 @@
 
 ## 📦 安裝
 
+### 下載
+
+從 [Releases](https://github.com/cablate/GPT-Typeless/releases) 下載最新版本：
+
+- **GPT-Typeless-x.x.x_x64-setup.exe** — 安裝版（推薦）
+- **GPT-Typeless-x.x.x_x64-portable.exe** — 便攜版
+
 ### Windows
 
 ```bash
