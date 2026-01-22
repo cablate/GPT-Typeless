@@ -29,6 +29,9 @@ interface RecordingStatus {
 
 interface AppConfig {
   chatgpt_token: string;
+  oai_client_build_number: string;
+  oai_client_version: string;
+  oai_device_id: string;
   hotkey: string;
   recording_format: string;
   audio_device: string | null;
@@ -61,6 +64,9 @@ function App() {
   });
   const [config, setConfig] = useState<AppConfig>({
     chatgpt_token: "",
+    oai_client_build_number: "",
+    oai_client_version: "",
+    oai_device_id: "",
     hotkey: "Ctrl+Shift+R",
     recording_format: "wav",
     audio_device: null,
@@ -69,6 +75,9 @@ function App() {
   const [error, setError] = useState("");
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [tempToken, setTempToken] = useState("");
+  const [tempBuildNumber, setTempBuildNumber] = useState("");
+  const [tempClientVersion, setTempClientVersion] = useState("");
+  const [tempDeviceId, setTempDeviceId] = useState("");
   const [transcriptionResult, setTranscriptionResult] = useState<string | null>(null);
 
   // 新增：轉錄歷史
@@ -86,6 +95,7 @@ function App() {
   // 時間追蹤
   const [startTime, setStartTime] = useState<number | null>(null);
   const [elapsed, setElapsed] = useState<number>(0);
+  const [finalTime, setFinalTime] = useState<number>(0);  // 保存最終時長
 
   // 更新步驟狀態的輔助函數
   const updateStep = (stepId: string, status: StepStatus) => {
@@ -104,6 +114,7 @@ function App() {
     ]);
     setStartTime(null);
     setElapsed(0);
+    setFinalTime(0);
     setTranscriptionResult(null);
   };
 
@@ -177,6 +188,9 @@ function App() {
       const result = await invoke<AppConfig>("get_config_command");
       setConfig(result);
       setTempToken(result.chatgpt_token);
+      setTempBuildNumber(result.oai_client_build_number);
+      setTempClientVersion(result.oai_client_version);
+      setTempDeviceId(result.oai_device_id);
       if (result.audio_device) {
         setSelectedDevice(result.audio_device);
       }
@@ -326,8 +340,10 @@ function App() {
         const text = await invoke<string>("transcribe_audio", { audioPath: result.audio_path });
         console.log("[handleMouseUp] 轉錄成功:", text);
 
-        const finalTime = Math.floor((Date.now() - transcriptionStartTime) / 1000);
-        setStartTime(null);
+        // 保存最終時長
+        const calculatedFinalTime = Math.floor((Date.now() - transcriptionStartTime) / 1000);
+        setFinalTime(calculatedFinalTime);
+        setStartTime(null);  // 停止計時器更新
 
         // 檢查轉錄結果是否為空
         const trimmedText = text.trim();
@@ -335,6 +351,9 @@ function App() {
           setError("轉錄結果為空，請確認錄音內容");
           setStatus("⚠️ 轉錄完成但無內容");
           setPendingCount(prev => prev - 1);
+          // 標記為完成狀態
+          updateStep("transcribe", "completed");
+          updateStep("done", "completed");
           return;
         }
 
@@ -412,7 +431,14 @@ function App() {
 
   const saveConfig = async () => {
     try {
-      const newConfig = { ...config, chatgpt_token: tempToken, audio_device: selectedDevice };
+      const newConfig = {
+        ...config,
+        chatgpt_token: tempToken,
+        oai_client_build_number: tempBuildNumber,
+        oai_client_version: tempClientVersion,
+        oai_device_id: tempDeviceId,
+        audio_device: selectedDevice
+      };
       await invoke("set_config", { config: newConfig });
       setConfig(newConfig);
       setIsSettingsOpen(false);
@@ -463,6 +489,11 @@ function App() {
             <span className="status-text">
               {recordingStatus.is_recording ? "錄音中" : "就緒"}
             </span>
+            {(startTime || finalTime > 0) && (
+              <span className="status-timer">
+                <Clock /> {formatTime(startTime ? elapsed : finalTime)}
+              </span>
+            )}
           </div>
         </div>
 
@@ -470,7 +501,7 @@ function App() {
           {/* 顯示處理數量 */}
           {pendingCount > 0 && (
             <span className="pending-badge">
-              處理中 {pendingCount}
+              {pendingCount}
             </span>
           )}
 
@@ -517,23 +548,16 @@ function App() {
           </section>
         )}
 
-        {/* 流程步驟 - 路線圖風格 */}
-        {(recordingStatus.is_recording || status.includes("錄音") || status.includes("轉錄")) && (
-          <section className="roadmap-container">
-            {startTime && (
-              <div className="roadmap-timer">
-                <Clock />
-                已用時: {formatTime(elapsed)}
-              </div>
-            )}
-            <div className="roadmap-steps">
-              {steps.map((step, index) => (
-                <div key={step.id} className={`roadmap-step ${step.status}`}>
-                  <div className="roadmap-step-content">
-                    <div className="roadmap-step-icon">
-                      {step.status === "completed" ? (
-                        <Check />
-                      ) : step.status === "active" ? (
+        {/* 流程步驟 - 路線圖風格（常駐顯示） */}
+        <section className="roadmap-container">
+          <div className="roadmap-steps">
+            {steps.map((step, index) => (
+              <div key={step.id} className={`roadmap-step ${step.status}`}>
+                <div className="roadmap-step-content">
+                  <div className="roadmap-step-icon">
+                    {step.status === "completed" ? (
+                      <Check />
+                    ) : step.status === "active" ? (
                         <span className="spin">⟳</span>
                       ) : (
                         <span className="step-number">{index + 1}</span>
@@ -550,7 +574,6 @@ function App() {
               ))}
             </div>
           </section>
-        )}
 
         {/* 錯誤訊息 */}
         {error && (
@@ -571,7 +594,7 @@ function App() {
                 className="copy-result-btn"
                 onClick={async () => {
                   await invoke("copy_to_clipboard", { text: transcriptionResult });
-                  setStatus("已複製到剪貼簿");
+                  // 不設置 status，避免重渲染
                 }}
               >
                 <Copy />
@@ -611,7 +634,7 @@ function App() {
                         className="history-copy-btn"
                         onClick={async () => {
                           await invoke("copy_to_clipboard", { text: item.text });
-                          setStatus("已複製到剪貼簿");
+                          // 不設置 status，避免重渲染
                         }}
                         title="複製"
                       >
@@ -638,18 +661,79 @@ function App() {
           onClose={() => {
             setIsSettingsOpen(false);
             setTempToken(config.chatgpt_token);
+            setTempBuildNumber(config.oai_client_build_number);
+            setTempClientVersion(config.oai_client_version);
+            setTempDeviceId(config.oai_device_id);
           }}
           title="設定"
         >
           <div className="modal-form-group">
-            <label htmlFor="token-input">ChatGPT Token：</label>
+            <label htmlFor="token-input">
+              ChatGPT Token
+              <span style={{ color: 'var(--danger)', fontWeight: 'normal', marginLeft: '0.25rem' }}>*</span>
+            </label>
             <input
               id="token-input"
               type="password"
               value={tempToken}
               onChange={(e) => setTempToken(e.target.value)}
-              placeholder="輸入您的 ChatGPT Token"
+              placeholder="eyJhbGciOiJSUzI1NiIsImtpZCI6..."
+              style={{ width: '100%', fontFamily: 'monospace', fontSize: '0.75rem' }}
             />
+          </div>
+
+          <div className="modal-form-group">
+            <label htmlFor="build-input">
+              oai-client-build-number
+              <span style={{ fontSize: '0.75rem', color: 'var(--text-tertiary)', fontWeight: 'normal', marginLeft: '0.5rem' }}>
+                (選填)
+              </span>
+            </label>
+            <input
+              id="build-input"
+              type="text"
+              value={tempBuildNumber}
+              onChange={(e) => setTempBuildNumber(e.target.value)}
+              placeholder="4228200"
+              style={{ width: '100%', fontFamily: 'monospace', fontSize: '0.75rem' }}
+            />
+          </div>
+
+          <div className="modal-form-group">
+            <label htmlFor="version-input">
+              oai-client-version
+              <span style={{ fontSize: '0.75rem', color: 'var(--text-tertiary)', fontWeight: 'normal', marginLeft: '0.5rem' }}>
+                (選填)
+              </span>
+            </label>
+            <input
+              id="version-input"
+              type="text"
+              value={tempClientVersion}
+              onChange={(e) => setTempClientVersion(e.target.value)}
+              placeholder="prod-113d17ee277d09e29075aec611394c0efe23d0e0"
+              style={{ width: '100%', fontFamily: 'monospace', fontSize: '0.75rem' }}
+            />
+          </div>
+
+          <div className="modal-form-group">
+            <label htmlFor="device-input">
+              oai-device-id
+              <span style={{ fontSize: '0.75rem', color: 'var(--text-tertiary)', fontWeight: 'normal', marginLeft: '0.5rem' }}>
+                (選填)
+              </span>
+            </label>
+            <input
+              id="device-input"
+              type="text"
+              value={tempDeviceId}
+              onChange={(e) => setTempDeviceId(e.target.value)}
+              placeholder="8f0b7aa2-af16-4225-a667-69a9be96d046"
+              style={{ width: '100%', fontFamily: 'monospace', fontSize: '0.75rem' }}
+            />
+            <div style={{ fontSize: '0.75rem', color: 'var(--text-tertiary)', marginTop: '0.375rem' }}>
+              💡 F12 → Network → 找 /backend-api/ 請求 → 查看 Headers
+            </div>
           </div>
 
           <div className="modal-form-group">
@@ -696,7 +780,7 @@ function App() {
       </main>
 
       <footer className="app-footer">
-        <p>GPT-Typeless v0.1.0</p>
+        <p>GPT-Typeless v1.0.0</p>
       </footer>
     </div>
   );

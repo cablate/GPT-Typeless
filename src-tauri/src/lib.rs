@@ -43,8 +43,12 @@ pub struct RecordingStatus {
 
 // 配置結構
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(default)]
 pub struct AppConfig {
     pub chatgpt_token: String,
+    pub oai_client_build_number: String,
+    pub oai_client_version: String,
+    pub oai_device_id: String,
     pub hotkey: String,
     pub recording_format: String,
     pub audio_device: Option<String>,
@@ -63,6 +67,9 @@ impl Default for AppConfig {
     fn default() -> Self {
         Self {
             chatgpt_token: String::new(),
+            oai_client_build_number: String::new(),
+            oai_client_version: String::new(),
+            oai_device_id: String::new(),
             hotkey: "Ctrl+Shift+R".to_string(),
             recording_format: "wav".to_string(),
             audio_device: None,
@@ -162,13 +169,26 @@ mod commands {
         let result = tokio::task::spawn_blocking(move || {
             // 讀取配置
             let config = super::get_config()?;
+
+            eprintln!("[transcribe_audio] token 長度: {}, build: {}, version: {}, device: {}",
+                config.chatgpt_token.len(),
+                config.oai_client_build_number.len(),
+                config.oai_client_version.len(),
+                config.oai_device_id.len()
+            );
+
+            // 驗證必要欄位
             if config.chatgpt_token.is_empty() {
-                return Err("ChatGPT Token 未設定".to_string());
+                return Err("請先設定 ChatGPT Token".to_string());
             }
 
-            // 建立 API 客戶端
-            let client = TranscribeClient::from_config_and_token(config.chatgpt_token)
-                .map_err(|e| format!("無法建立 API 客戶端: {}", e))?;
+            // 使用 4 個關鍵欄位建立 API 客戶端
+            let client = TranscribeClient::from_fields(
+                config.chatgpt_token.clone(),
+                config.oai_client_build_number.clone(),
+                config.oai_client_version.clone(),
+                config.oai_device_id.clone(),
+            ).map_err(|e| format!("無法建立 API 客戶端: {}", e))?;
 
             // 執行轉錄
             let result = client.transcribe(std::path::Path::new(&audio_path))?;
@@ -233,7 +253,7 @@ mod commands {
 
         Ok(HealthStatus {
             status: "healthy".to_string(),
-            version: "0.1.0".to_string(),
+            version: "1.0.0".to_string(),
             can_record,
         })
     }

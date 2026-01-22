@@ -1,6 +1,6 @@
 <div align="center">
 
-# GPTService
+# GPT-Typeless
 
 **一鍵錄音，即時轉錄** — 將您的語音快速轉換為文字
 

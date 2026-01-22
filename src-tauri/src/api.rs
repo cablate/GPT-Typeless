@@ -22,9 +22,9 @@ impl Default for TranscribeConfig {
         Self {
             api_url: "https://chatgpt.com/backend-api/transcribe".to_string(),
             api_token: String::new(),
-            client_build_number: "4025787".to_string(),
-            client_version: "prod-cf4e0b91c1cd2687edffc72f2102620d03e305b8".to_string(),
-            device_id: "6182d129-e978-42a2-b549-e169fd2af647".to_string(),
+            client_build_number: String::new(),
+            client_version: String::new(),
+            device_id: String::new(),
             max_retries: 3,
             retry_delay: Duration::from_secs(2),
         }
@@ -71,10 +71,18 @@ impl TranscribeClient {
         Ok(Self { config, client })
     }
 
-    /// 從 AppConfig 創建
-    pub fn from_config_and_token(api_token: String) -> Result<Self, String> {
+    /// 從 4 個關鍵欄位創建
+    pub fn from_fields(
+        token: String,
+        build_number: String,
+        client_version: String,
+        device_id: String,
+    ) -> Result<Self, String> {
         let mut config = TranscribeConfig::default();
-        config.api_token = api_token;
+        config.api_token = token;
+        config.client_build_number = build_number;
+        config.client_version = client_version;
+        config.device_id = device_id;
 
         Self::new(config)
     }
@@ -122,17 +130,15 @@ impl TranscribeClient {
         let form = multipart::Form::new()
             .part("file", part);
 
-        // 發送請求 - 根據 POC 添加所有必需的 headers
-        let response = self.client
-            .post(&self.config.api_url)
+        // 建立請求
+        let mut request = self.client.post(&self.config.api_url);
+
+        // 建置標準 headers
+        request = request
             .header("accept", "*/*")
             .header("accept-language", "zh-TW,zh;q=0.9,en-US;q=0.8,en;q=0.7,ja;q=0.6")
             .header("authorization", format!("Bearer {}", self.config.api_token))
             .header("cache-control", "no-cache")
-            .header("oai-client-build-number", &self.config.client_build_number)
-            .header("oai-client-version", &self.config.client_version)
-            .header("oai-device-id", &self.config.device_id)
-            .header("oai-language", "zh-TW")
             .header("origin", "https://chatgpt.com")
             .header("pragma", "no-cache")
             .header("referer", "https://chatgpt.com/")
@@ -145,7 +151,21 @@ impl TranscribeClient {
             .header("sec-fetch-dest", "empty")
             .header("sec-fetch-mode", "cors")
             .header("sec-fetch-site", "same-origin")
-            .header("user-agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Safari/537.36")
+            .header("user-agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Safari/537.36");
+
+        // 添加選用的 OpenAI 特定 headers（如果已設定）
+        if !self.config.client_build_number.is_empty() {
+            request = request.header("oai-client-build-number", &self.config.client_build_number);
+        }
+        if !self.config.client_version.is_empty() {
+            request = request.header("oai-client-version", &self.config.client_version);
+        }
+        if !self.config.device_id.is_empty() {
+            request = request.header("oai-device-id", &self.config.device_id);
+            request = request.header("oai-language", "zh-TW");
+        }
+
+        let response = request
             .multipart(form)
             .send()
             .map_err(|e| format!("API 請求失敗: {}", e))?;
