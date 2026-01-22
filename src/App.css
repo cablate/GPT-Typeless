@@ -2,6 +2,10 @@
 
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
 
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
 :root {
   /* Professional Color System */
   --primary: #2563eb;
@@ -19,13 +23,21 @@
   --bg-primary: #ffffff;
   --bg-secondary: #f8fafc;
   --bg-tertiary: #f1f5f9;
+  --bg-card: #ffffff;
+  --bg-danger-light: #fee2e2;
 
   --text-primary: #0f172a;
   --text-secondary: #475569;
+  --text-tertiary: #64748b;
   --text-muted: #94a3b8;
 
   --border-light: #e2e8f0;
   --border-medium: #cbd5e1;
+
+  /* Border Radius */
+  --radius-sm: 4px;
+  --radius-md: 8px;
+  --radius-lg: 12px;
 
   /* Shadow System */
   --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
@@ -67,35 +79,126 @@ body {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 1.25rem 1.5rem;
+  gap: 1rem;
+  padding: 0.875rem 1.25rem;
   background: var(--bg-primary);
   border-bottom: 1px solid var(--border-light);
   box-shadow: var(--shadow-sm);
 }
 
-.app-header h1 {
+/* Header Left */
+.header-left {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.header-left h1 {
   font-size: 1.125rem;
   font-weight: 600;
   color: var(--text-primary);
   letter-spacing: -0.01em;
+  margin: 0;
 }
 
-.settings-btn {
+.recording-status {
   display: flex;
   align-items: center;
   gap: 0.375rem;
+  font-size: 0.8125rem;
+  color: var(--text-secondary);
+}
+
+/* Header Right */
+.header-right {
+  display: flex;
+  align-items: center;
+  gap: 0.625rem;
+}
+
+/* Record Button - 與 Settings Button 同尺寸 */
+.record-btn {
+  display: flex;
+  align-items: center;
+  gap: 0.375rem;
+  padding: 0.5rem;
+  background: var(--primary);
+  color: white;
+  border: none;
+  border-radius: var(--radius-md);
+  font-size: 0.8125rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all var(--transition-base);
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+.record-btn:hover {
+  background: var(--primary-hover);
+}
+
+.record-btn.pressing {
+  background: var(--primary-hover);
+  transform: scale(0.97);
+}
+
+.record-btn.recording {
+  background: var(--danger);
+  animation: pulse-recording 1.5s ease-in-out infinite;
+}
+
+.record-btn.recording:hover {
+  background: var(--danger-hover);
+}
+
+.record-btn.recording.pressing {
+  background: var(--danger-hover);
+}
+
+@keyframes pulse-recording {
+  0%, 100% {
+    box-shadow: 0 0 0 0 rgba(220, 38, 38, 0.4);
+  }
+  50% {
+    box-shadow: 0 0 0 6px rgba(220, 38, 38, 0);
+  }
+}
+
+/* Hotkey Hint */
+.hotkey-hint {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  font-size: 0.75rem;
+  color: var(--text-tertiary);
+  background: var(--bg-tertiary);
+  padding: 0.25rem 0.5rem;
+  border-radius: var(--radius-sm);
+}
+
+.hotkey-hint svg {
+  width: 14px;
+  height: 14px;
+}
+
+/* Settings Button */
+.settings-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
   background: transparent;
   border: 1px solid var(--border-light);
   color: var(--text-secondary);
-  padding: 0.5rem 0.75rem;
-  border-radius: 6px;
+  padding: 0.5rem;
+  border-radius: var(--radius-md);
   cursor: pointer;
-  font-size: 0.875rem;
-  font-weight: 500;
   transition: all var(--transition-base);
 }
 
 .settings-btn svg {
+  width: 18px;
+  height: 18px;
   flex-shrink: 0;
 }
 
@@ -276,97 +379,153 @@ body {
   gap: 0.5rem;
 }
 
-/* Status Steps - 流程可視化 */
-.status-steps {
-  display: flex;
-  flex-direction: column;
-  gap: 0.5rem;
-  margin-top: 0.75rem;
-  padding: 0.75rem;
-  background: var(--bg-secondary);
-  border-radius: 6px;
+/* ========== Roadmap Steps - 路線圖風格流程 ========== */
+.roadmap-container {
+  background: var(--bg-card);
   border: 1px solid var(--border-light);
+  border-radius: var(--radius-lg);
+  padding: 1rem;
+  animation: fade-in 0.3s ease-out;
 }
 
-.elapsed-time {
+.roadmap-timer {
   text-align: center;
-  font-size: 0.8125rem;
-  font-weight: 500;
+  font-size: 0.875rem;
+  font-weight: 600;
   color: var(--primary);
   background: var(--primary-light);
-  padding: 0.375rem 0.5rem;
-  border-radius: 4px;
-  margin-bottom: 0.5rem;
+  padding: 0.5rem 0.75rem;
+  border-radius: var(--radius-md);
+  margin-bottom: 1rem;
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 0.375rem;
+  gap: 0.5rem;
 }
 
-.elapsed-time svg {
-  flex-shrink: 0;
-}
-
-.status-step {
-  display: flex;
-  align-items: center;
-  gap: 0.625rem;
-  padding: 0.375rem 0.5rem;
-  border-radius: 4px;
-  font-size: 0.8125rem;
-  transition: all var(--transition-base);
-}
-
-.status-step.pending {
-  color: var(--text-muted);
-}
-
-.status-step.active {
-  background: var(--primary-light);
-  color: var(--primary);
-  font-weight: 500;
-}
-
-.status-step.completed {
-  background: var(--success-light);
-  color: var(--success);
-}
-
-.status-step-icon {
+.roadmap-timer svg {
   width: 16px;
   height: 16px;
+}
+
+.roadmap-steps {
+  display: flex;
+  align-items: flex-start;
+  gap: 0;
+  position: relative;
+}
+
+.roadmap-step {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  position: relative;
+  min-width: 0;
+}
+
+.roadmap-step-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.5rem;
+  z-index: 2;
+  padding: 0 0.25rem;
+}
+
+.roadmap-step-icon {
+  width: 32px;
+  height: 32px;
   display: flex;
   align-items: center;
   justify-content: center;
   border-radius: 50%;
-  background: var(--bg-primary);
-  font-size: 0.625rem;
-  flex-shrink: 0;
+  background: var(--bg-secondary);
+  border: 2px solid var(--border-medium);
+  color: var(--text-muted);
+  font-size: 0.875rem;
+  font-weight: 600;
+  transition: all var(--transition-base);
+  position: relative;
 }
 
-.status-step.pending .status-step-icon {
-  border: 1.5px solid var(--border-medium);
+.roadmap-step.pending .roadmap-step-icon {
+  background: var(--bg-secondary);
+  border-color: var(--border-medium);
+  color: var(--text-muted);
 }
 
-.status-step.active .status-step-icon {
-  border: 1.5px solid var(--primary);
-  animation: spin 1s linear infinite;
-}
-
-.status-step.completed .status-step-icon {
-  background: var(--success);
+.roadmap-step.active .roadmap-step-icon {
+  background: var(--primary);
+  border-color: var(--primary);
   color: white;
-  border: none;
+  box-shadow: 0 0 0 4px var(--primary-light);
+  animation: pulse-active 2s ease-in-out infinite;
 }
 
-@keyframes slideIn {
-  from {
-    opacity: 0;
-    transform: translateY(-8px);
+.roadmap-step.completed .roadmap-step-icon {
+  background: var(--success);
+  border-color: var(--success);
+  color: white;
+}
+
+.roadmap-step-icon svg {
+  width: 16px;
+  height: 16px;
+}
+
+.roadmap-step-icon .spin {
+  animation: spin 1s linear infinite;
+  display: inline-block;
+}
+
+.roadmap-step-icon .step-number {
+  font-size: 0.875rem;
+  font-weight: 600;
+}
+
+.roadmap-step-label {
+  font-size: 0.75rem;
+  font-weight: 500;
+  text-align: center;
+  color: var(--text-secondary);
+  white-space: nowrap;
+}
+
+.roadmap-step.pending .roadmap-step-label {
+  color: var(--text-muted);
+}
+
+.roadmap-step.active .roadmap-step-label {
+  color: var(--primary);
+}
+
+.roadmap-step.completed .roadmap-step-label {
+  color: var(--success);
+}
+
+.roadmap-connector {
+  position: absolute;
+  top: 16px;
+  left: calc(50% + 16px);
+  right: calc(-50% + 16px);
+  height: 2px;
+  background: var(--border-light);
+  z-index: 1;
+  transition: all var(--transition-slow);
+}
+
+.roadmap-connector.completed {
+  background: var(--success);
+  background: linear-gradient(90deg, var(--success) 0%, var(--success-light) 100%);
+}
+
+@keyframes pulse-active {
+  0%, 100% {
+    box-shadow: 0 0 0 4px var(--primary-light);
   }
-  to {
-    opacity: 1;
-    transform: translateY(0);
+  50% {
+    box-shadow: 0 0 0 8px rgba(37, 99, 235, 0.2);
   }
 }
 
@@ -376,6 +535,17 @@ body {
   }
   to {
     transform: rotate(360deg);
+  }
+}
+
+@keyframes fade-in {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
   }
 }
 
@@ -663,14 +833,23 @@ body {
     max-width: none;
   }
 
-  .status-steps {
-    gap: 0.5rem;
+  .roadmap-container {
     padding: 0.75rem;
   }
 
-  .status-step {
-    font-size: 0.85rem;
-    padding: 0.4rem 0.6rem;
+  .roadmap-step-icon {
+    width: 28px;
+    height: 28px;
+  }
+
+  .roadmap-connector {
+    top: 14px;
+    left: calc(50% + 14px);
+    right: calc(-50% + 14px);
+  }
+
+  .roadmap-step-label {
+    font-size: 0.6875rem;
   }
 
   .hotkey-hint {
@@ -678,9 +857,9 @@ body {
     padding: 0.25rem 0.5rem;
   }
 
-  .elapsed-time {
+  .roadmap-timer {
     font-size: 0.8rem;
-    padding: 0.4rem;
+    padding: 0.4rem 0.6rem;
   }
 }
 
@@ -745,8 +924,7 @@ body {
     padding: 0.75rem 1rem;
   }
 
-  .status-steps {
-    gap: 0.5rem;
+  .roadmap-container {
     padding: 0.75rem;
     margin-top: 0.75rem;
   }
@@ -762,9 +940,19 @@ body {
 
 /* 超矮視窗 (極限壓縮) */
 @media (max-height: 450px) {
-  .control-section {
-    padding: 0.75rem;
-    gap: 0.75rem;
+  .roadmap-container {
+    padding: 0.5rem;
+  }
+
+  .roadmap-step-icon {
+    width: 24px;
+    height: 24px;
+  }
+
+  .roadmap-connector {
+    top: 12px;
+    left: calc(50% + 12px);
+    right: calc(-50% + 12px);
   }
 
   .settings-section,
@@ -788,20 +976,19 @@ body {
     line-height: 1.5;
   }
 
-  .status-steps {
+  .roadmap-container {
     padding: 0.5rem;
     margin-top: 0.5rem;
   }
 
-  .elapsed-time {
+  .roadmap-timer {
     font-size: 0.8rem;
     padding: 0.25rem 0.5rem;
-    margin-bottom: 0.25rem;
+    margin-bottom: 0.5rem;
   }
 
-  .status-step {
-    padding: 0.4rem 0.6rem;
-    font-size: 0.85rem;
+  .roadmap-step-label {
+    font-size: 0.6875rem;
   }
 
   .app-header h1 {
@@ -814,23 +1001,17 @@ body {
   }
 }
 
-/* 步驟水平佈局 - 較大視窗下節省垂直空間 */
+/* 較大視窗下路線圖保持水平佈局 */
 @media (min-width: 500px) and (min-height: 500px) {
-  .status-steps {
+  .roadmap-steps {
     flex-direction: row;
-    flex-wrap: wrap;
-    justify-content: center;
-    gap: 0.5rem;
-    padding: 0.75rem;
-    margin-top: 0.75rem;
   }
 
-  .status-step {
-    padding: 0.4rem 0.6rem;
-    font-size: 0.85rem;
+  .roadmap-step {
+    flex-direction: column;
   }
 
-  .elapsed-time {
+  .roadmap-timer {
     width: 100%;
   }
 }
@@ -1099,5 +1280,190 @@ body {
 
   .modal-form-group {
     margin-bottom: 0.75rem;
+  }
+}
+
+/* ========== Header Right ========== */
+.header-right {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+/* ========== Pending Badge ========== */
+.pending-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.375rem 0.75rem;
+  background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+  color: white;
+  border-radius: 20px;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  box-shadow: 0 2px 8px rgba(59, 130, 246, 0.3);
+  animation: pulse-subtle 2s ease-in-out infinite;
+}
+
+@keyframes pulse-subtle {
+  0%, 100% {
+    box-shadow: 0 2px 8px rgba(59, 130, 246, 0.3);
+  }
+  50% {
+    box-shadow: 0 2px 12px rgba(59, 130, 246, 0.5);
+  }
+}
+
+/* ========== History Section ========== */
+.history-section {
+  background: var(--bg-card);
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius-lg);
+  padding: 1rem;
+  margin-top: 1rem;
+  animation: fade-in 0.3s ease-out;
+}
+
+.history-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0.875rem;
+}
+
+.history-header h3 {
+  margin: 0;
+  font-size: 0.9375rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  display: flex;
+  align-items: center;
+  gap: 0.375rem;
+}
+
+.clear-history-btn {
+  padding: 0.375rem 0.75rem;
+  background: transparent;
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius-sm);
+  color: var(--text-secondary);
+  font-size: 0.8125rem;
+  cursor: pointer;
+  transition: all var(--transition-base);
+}
+
+.clear-history-btn:hover {
+  background: var(--bg-danger-light);
+  border-color: var(--danger);
+  color: var(--danger);
+}
+
+/* ========== History List ========== */
+.history-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.history-item {
+  background: #ffffff;
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius-md);
+  overflow: hidden;
+  transition: all var(--transition-base);
+}
+
+.history-item:hover {
+  border-color: var(--border-medium);
+  box-shadow: var(--shadow-sm);
+  background: #fafbfc;
+}
+
+.history-item-main {
+  padding: 0.875rem;
+}
+
+.history-item-text {
+  font-size: 0.875rem;
+  color: #1e293b;
+  line-height: 1.6;
+  margin-bottom: 0.625rem;
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  word-break: break-word;
+}
+
+.history-item-meta {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding-top: 0.625rem;
+  border-top: 1px solid var(--border-light);
+}
+
+.history-time,
+.history-date {
+  font-size: 0.75rem;
+  color: var(--text-tertiary);
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+.history-copy-btn,
+.history-delete-btn {
+  padding: 0.375rem;
+  background: transparent;
+  border: none;
+  border-radius: var(--radius-sm);
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: all var(--transition-base);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.history-copy-btn:hover {
+  background: var(--bg-tertiary);
+  color: var(--primary);
+}
+
+.history-delete-btn:hover {
+  background: var(--bg-danger-light);
+  color: var(--danger);
+}
+
+.history-copy-btn svg,
+.history-delete-btn svg {
+  width: 16px;
+  height: 16px;
+}
+
+/* ========== History Section Responsive ========== */
+@media (max-width: 400px) {
+  .history-item-meta {
+    flex-wrap: wrap;
+    gap: 0.5rem;
+  }
+
+  .history-time,
+  .history-date {
+    font-size: 0.6875rem;
+  }
+}
+
+@media (max-height: 550px) {
+  .history-section {
+    padding: 0.75rem;
+  }
+
+  .history-item-main {
+    padding: 0.625rem;
+  }
+
+  .history-item-text {
+    -webkit-line-clamp: 2;
   }
 }

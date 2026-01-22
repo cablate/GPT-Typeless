@@ -18,7 +18,15 @@ pub struct RecordingSession {
     pub id: String,
     pub file_path: PathBuf,
     pub spec: SupportedStreamConfig,
+    pub start_time: chrono::DateTime<chrono::Utc>,
     _stream: cpal::Stream,
+}
+
+// 停止錄音結果
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct StopRecordingResult {
+    pub audio_path: String,
+    pub duration: u64,  // 錄音時長（秒）
 }
 
 // 錄音管理器（不存儲 Host，因為 Host 不是 Send）
@@ -139,6 +147,7 @@ impl AudioManager {
             id: recording_id.clone(),
             file_path,
             spec: config,
+            start_time: chrono::Utc::now(),
             _stream: stream,
         });
 
@@ -277,7 +286,7 @@ impl AudioManager {
     }
 
     /// 停止錄音
-    pub fn stop_recording(&self) -> Result<PathBuf, String> {
+    pub fn stop_recording(&self) -> Result<StopRecordingResult, String> {
         let mut session = self.current_session.lock()
             .map_err(|e| format!("無法存取會話: {}", e))?;
 
@@ -287,7 +296,13 @@ impl AudioManager {
         // 丟棄串流（會自動停止）
         drop(recording._stream);
 
-        Ok(recording.file_path)
+        // 計算錄音時長（秒）
+        let duration = (chrono::Utc::now() - recording.start_time).num_seconds() as u64;
+
+        Ok(StopRecordingResult {
+            audio_path: recording.file_path.to_string_lossy().to_string(),
+            duration,
+        })
     }
 
     /// 取得當前錄音狀態

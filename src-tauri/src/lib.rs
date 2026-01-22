@@ -20,6 +20,13 @@ fn get_config_path() -> PathBuf {
     path
 }
 
+// 歷史記錄文件路徑
+fn get_history_path() -> PathBuf {
+    let mut path = std::env::current_dir().unwrap_or_else(|_| PathBuf::from("."));
+    path.push("gptservice-history.json");
+    path
+}
+
 // 應用狀態
 pub struct AppState {
     pub audio_manager: Mutex<AudioManager>,
@@ -41,6 +48,15 @@ pub struct AppConfig {
     pub hotkey: String,
     pub recording_format: String,
     pub audio_device: Option<String>,
+}
+
+// 轉錄歷史記錄
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct TranscriptionHistory {
+    pub id: String,
+    pub text: String,
+    pub duration: u64,     // 錄音時長（秒）
+    pub timestamp: i64,    // 轉錄完成時間戳（毫秒）
 }
 
 impl Default for AppConfig {
@@ -109,13 +125,11 @@ mod commands {
     }
 
     #[tauri::command]
-    pub fn stop_recording(state: State<'_, AppState>) -> Result<String, String> {
+    pub fn stop_recording(state: State<'_, AppState>) -> Result<audio::StopRecordingResult, String> {
         let manager = state.audio_manager.lock()
             .map_err(|e| format!("無法存取 AudioManager: {}", e))?;
 
-        let file_path = manager.stop_recording()?;
-        // 返回完整的檔案路徑字符串，供前端使用
-        Ok(file_path.to_string_lossy().to_string())
+        manager.stop_recording()
     }
 
     #[tauri::command]
@@ -228,6 +242,107 @@ mod commands {
     pub fn greet(name: &str) -> String {
         format!("Hello, {}! You've been greeted from Rust!", name)
     }
+
+    // ========== 轉錄歷史記錄指令 ==========
+
+    /// 獲取轉錄歷史記錄列表（最近 5 筆）
+    #[tauri::command]
+    pub fn get_transcription_history() -> Result<Vec<TranscriptionHistory>, String> {
+        let history_path = super::get_history_path();
+
+        // 如果歷史文件不存在，返回空列表
+        if !history_path.exists() {
+            return Ok(Vec::new());
+        }
+
+        // 讀取歷史文件
+        let content = std::fs::read_to_string(&history_path)
+            .map_err(|e| format!("無法讀取歷史文件: {}", e))?;
+
+        // 解析 JSON
+        let mut history: Vec<TranscriptionHistory> = serde_json::from_str(&content)
+            .map_err(|e| format!("歷史文件格式錯誤: {}", e))?;
+
+        // 按時間戳降序排序，返回最近 5 筆
+        history.sort_by(|a, b| b.timestamp.cmp(&a.timestamp));
+        history.truncate(5);
+
+        Ok(history)
+    }
+
+    /// 刪除單筆歷史記錄
+    #[tauri::command]
+    pub fn delete_history_item(id: String) -> Result<(), String> {
+        let history_path = super::get_history_path();
+
+        // 如果歷史文件不存在，返回成功
+        if !history_path.exists() {
+            return Ok(());
+        }
+
+        // 讀取現有歷史
+        let content = std::fs::read_to_string(&history_path)
+            .map_err(|e| format!("無法讀取歷史文件: {}", e))?;
+
+        let mut history: Vec<TranscriptionHistory> = serde_json::from_str(&content)
+            .map_err(|e| format!("歷史文件格式錯誤: {}", e))?;
+
+        // 刪除指定 ID 的記錄
+        history.retain(|item| item.id != id);
+
+        // 保存更新後的歷史
+        let json_content = serde_json::to_string_pretty(&history)
+            .map_err(|e| format!("無法序列化歷史: {}", e))?;
+
+        std::fs::write(&history_path, json_content)
+            .map_err(|e| format!("無法寫入歷史文件: {}", e))
+    }
+
+    /// 清空所有歷史記錄
+    #[tauri::command]
+    pub fn clear_all_history() -> Result<(), String> {
+        let history_path = super::get_history_path();
+
+        // 如果文件存在則刪除
+        if history_path.exists() {
+            std::fs::remove_file(&history_path)
+                .map_err(|e| format!("無法刪除歷史文件: {}", e))?;
+        }
+
+        Ok(())
+    }
+
+    /// 添加轉錄記錄到歷史（內部使用）
+    pub fn add_to_history(text: String, duration: u64) -> Result<(), String> {
+        let history_path = super::get_history_path();
+
+        // 讀取現有歷史或建立新的
+        let mut history: Vec<TranscriptionHistory> = if history_path.exists() {
+            let content = std::fs::read_to_string(&history_path)
+                .map_err(|e| format!("無法讀取歷史文件: {}", e))?;
+            serde_json::from_str(&content)
+                .map_err(|e| format!("歷史文件格式錯誤: {}", e))?
+        } else {
+            Vec::new()
+        };
+
+        // 添加新記錄
+        let new_record = TranscriptionHistory {
+            id: chrono::Utc::now().timestamp_millis().to_string(),
+            text,
+            duration,
+            timestamp: chrono::Utc::now().timestamp_millis(),
+        };
+
+        history.push(new_record);
+
+        // 保存
+        let json_content = serde_json::to_string_pretty(&history)
+            .map_err(|e| format!("無法序列化歷史: {}", e))?;
+
+        std::fs::write(&history_path, json_content)
+            .map_err(|e| format!("無法寫入歷史文件: {}", e))
+    }
 }
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
@@ -270,8 +385,10 @@ pub fn run() {
                     match hotkey_receiver.recv() {
                         Ok(event) => {
                             println!("收到熱鍵事件: {:?}", event);
-                            // 發送 Tauri 事件到前端，觸發錄音切換
-                            let _ = handle.emit("hotkey-triggered", "recording_toggle");
+                            // 區分 Pressed 和 Released 狀態
+                            // Pressed: 開始錄音, Released: 停止錄音
+                            let is_pressed = matches!(event.state, global_hotkey::HotKeyState::Pressed);
+                            let _ = handle.emit("hotkey-triggered", is_pressed);
                         }
                         Err(_) => {
                             eprintln!("熱鍵接收器錯誤");
@@ -313,6 +430,9 @@ pub fn run() {
             commands::set_config,
             commands::cleanup_old_recordings,
             commands::health_check,
+            commands::get_transcription_history,
+            commands::delete_history_item,
+            commands::clear_all_history,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

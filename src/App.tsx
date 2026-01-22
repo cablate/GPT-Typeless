@@ -1,19 +1,19 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
 import "./App.css";
 import {
-  MicIcon,
-  StopIcon,
-  SettingsIcon,
-  ClockIcon,
-  DocumentIcon,
-  CopyIcon,
-  CheckIcon,
-  CloseIcon,
-  TrashIcon,
-  LightbulbIcon,
-} from "./components/Icons";
+  Mic,
+  Square,
+  Settings,
+  Clock,
+  FileText,
+  Copy,
+  Check,
+  X,
+  Trash,
+  Lightbulb,
+} from "lucide-react";
 import { Modal } from "./components/Modal";
 
 // 類型定義
@@ -32,6 +32,14 @@ interface AppConfig {
   hotkey: string;
   recording_format: string;
   audio_device: string | null;
+}
+
+// 轉錄歷史記錄
+interface TranscriptionHistory {
+  id: string;
+  text: string;
+  duration: number; // 錄音時長（秒）
+  timestamp: number; // 轉錄完成時間戳
 }
 
 // 狀態步驟
@@ -63,6 +71,10 @@ function App() {
   const [tempToken, setTempToken] = useState("");
   const [transcriptionResult, setTranscriptionResult] = useState<string | null>(null);
 
+  // 新增：轉錄歷史
+  const [history, setHistory] = useState<TranscriptionHistory[]>([]);
+  const [pendingCount, setPendingCount] = useState(0);
+
   // 流程步驟狀態
   const [steps, setSteps] = useState<Step[]>([
     { id: "record", label: "錄音中", status: "pending" },
@@ -90,31 +102,57 @@ function App() {
       { id: "transcribe", label: "API 轉錄中", status: "pending" },
       { id: "done", label: "完成", status: "pending" },
     ]);
-    setStartTime(null);  // 不在錄音開始時設定時間
+    setStartTime(null);
     setElapsed(0);
     setTranscriptionResult(null);
   };
 
-  // 載入設備列表
+  // 載入設備列表和配置
   useEffect(() => {
-    loadDevices();
-    loadConfig();
+    const initApp = async () => {
+      await loadDevices();
+      await loadConfig();
+      await loadHistory();
 
-    // 監聽熱鍵事件
-    const unlisten = listen<string>("hotkey-triggered", (event) => {
-      console.log("收到熱鍵事件:", event.payload);
-      toggleRecording();
-    });
+      // 配置載入後再設置熱鍵監聽
+      const unlisten = listen<any>("hotkey-triggered", (event) => {
+        console.log("收到熱鍵事件 payload:", event.payload, "類型:", typeof event.payload);
+        const isPressed = event.payload === true;
+        console.log("解析後 isPressed:", isPressed);
 
-    return () => {
-      unlisten.then((fn) => fn());
+        if (isPressed) {
+          // Pressed: 檢查是否已在等待 Released（防止重複觸發）
+          if (hotkeyStateRef.current.isWaitingForReleased) {
+            console.log("[快捷鍵] 已在等待 Released，忽略此 Pressed");
+            return;
+          }
+          // 標記正在等待 Released，並記錄時間
+          hotkeyStateRef.current.isWaitingForReleased = true;
+          hotkeyStateRef.current.lastPressedTime = Date.now();
+          handleMouseDown();
+        } else {
+          // Released: 檢查是否有效（必須有對應的 Pressed）
+          if (!hotkeyStateRef.current.isWaitingForReleased) {
+            console.log("[快捷鍵] 沒有對應的 Pressed，忽略此 Released");
+            return;
+          }
+          // 清除標記並執行停止
+          hotkeyStateRef.current.isWaitingForReleased = false;
+          handleMouseUp();
+        }
+      });
+
+      return () => {
+        unlisten.then((fn) => fn());
+      };
     };
+
+    initApp();
   }, []);
 
   // 計時器：每秒更新經過時間（只在轉錄過程中）
   useEffect(() => {
     let interval: number | null = null;
-    // 只在轉錄過程中顯示計時，不在錄音時
     if (startTime && status.includes("轉錄")) {
       interval = window.setInterval(() => {
         setElapsed(Math.floor((Date.now() - startTime) / 1000));
@@ -129,10 +167,6 @@ function App() {
     try {
       const result = await invoke<AudioDevice[]>("list_audio_devices");
       setDevices(result);
-      const defaultDevice = result.find((d) => d.is_default);
-      if (defaultDevice) {
-        setSelectedDevice(defaultDevice.name);
-      }
     } catch (err) {
       setError(`無法載入設備列表: ${err}`);
     }
@@ -143,12 +177,41 @@ function App() {
       const result = await invoke<AppConfig>("get_config_command");
       setConfig(result);
       setTempToken(result.chatgpt_token);
+      if (result.audio_device) {
+        setSelectedDevice(result.audio_device);
+      }
     } catch (err) {
       console.error("無法載入配置:", err);
     }
   };
 
-  const startRecording = async () => {
+  // 新增：載入轉錄歷史
+  const loadHistory = async () => {
+    try {
+      const result = await invoke<TranscriptionHistory[]>("get_transcription_history");
+      setHistory(result);
+    } catch (err) {
+      console.error("無法載入歷史:", err);
+    }
+  };
+
+  // 長按錄音狀態
+  const [isPressing, setIsPressing] = useState(false);
+  // @ts-expect-error - isStartingRecording is used indirectly via setIsStartingRecording
+  const [isStartingRecording, setIsStartingRecording] = useState(false);
+
+  // 快捷鍵狀態鎖：確保 Pressed → Released 順序
+  const hotkeyStateRef = useRef({
+    isWaitingForReleased: false,
+    lastPressedTime: 0,
+  });
+
+  // 開始錄音（長按觸發）
+  const handleMouseDown = async () => {
+    console.log("[handleMouseDown] 開始");
+    setIsPressing(true);
+    setIsStartingRecording(true);
+
     try {
       setError("");
       resetSteps();
@@ -160,71 +223,164 @@ function App() {
         deviceName: deviceId,
       });
 
+      console.log("[handleMouseDown] 錄音啟動成功:", recordingId);
+      setIsStartingRecording(false);
       setRecordingStatus({
         is_recording: true,
         recording_id: recordingId,
       });
 
       updateStep("record", "completed");
-      setStatus("🎙️ 錄音中... (再按一次停止)");
+      setStatus("🎙️ 錄音中... (鬆開停止)");
     } catch (err) {
-      setError(`無法開始錄音: ${err}`);
-      setStatus("❌ 開始錄音失敗");
+      console.log("[handleMouseDown] 錄音啟動失敗:", err);
+      setIsStartingRecording(false);
+      setIsPressing(false);
+
+      // 啟動錄音失敗，重新同步後端狀態
+      try {
+        const actualStatus = await invoke<RecordingStatus>("get_recording_status");
+        console.log("[handleMouseDown] 後端實際狀態:", actualStatus);
+        setRecordingStatus({
+          is_recording: actualStatus.is_recording,
+          recording_id: actualStatus.recording_id,
+        });
+
+        if (actualStatus.is_recording) {
+          updateStep("record", "completed");
+          setStatus("🎙️ 錄音中... (鬆開停止)");
+        } else {
+          setError(`無法開始錄音: ${err}`);
+          setStatus("❌ 開始錄音失敗");
+        }
+      } catch (statusErr) {
+        console.log("[handleMouseDown] 獲取狀態也失敗:", statusErr);
+        setError(`無法開始錄音: ${err}`);
+        setStatus("❌ 開始錄音失敗");
+      }
     }
   };
 
-  const stopRecording = async () => {
+  // 停止錄音（鬆開或滑出觸發）
+  const handleMouseUp = async () => {
+    setIsPressing(false);
+
+    // 如果正在啟動錄音，等待一下讓它完成
+    // 使用函數式更新確保獲取最新狀態
+    let shouldWait = false;
+    setIsStartingRecording(prev => {
+      shouldWait = prev;
+      return prev; // 不改變狀態
+    });
+
+    if (shouldWait) {
+      console.log("[handleMouseUp] 等待錄音啟動完成...");
+      await new Promise(resolve => setTimeout(resolve, 500));
+    }
+    setIsStartingRecording(false);
+
+    // 直接嘗試停止錄音（不管前端狀態是什麼）
     try {
+      console.log("[handleMouseUp] 開始停止錄音");
       setError("");
       setStatus("正在停止錄音...");
 
-      // 獲取錄音檔案路徑
-      const audioPath = await invoke<string>("stop_recording");
+      const result = await invoke<{audio_path: string; duration: number}>("stop_recording");
+      console.log("[handleMouseUp] stop_recording 成功:", result);
 
+      // 只有成功停止才更新狀態
       setRecordingStatus({
         is_recording: false,
         recording_id: null,
       });
 
       updateStep("save", "completed");
-      setStatus(`✓ 錄音已保存`);
+      setStatus(`✓ 錄音已保存 (時長: ${formatTime(result.duration)})`);
 
-      // 檢查 Token 配置
-      if (!config.chatgpt_token) {
-        setError("請先在設定中配置 ChatGPT Token");
-        setStatus("⚠️ 錄音已保存，但未設定 Token 無法轉錄");
+      // 檢查 Token 配置（直接從後端檢查）
+      try {
+        const currentConfig = await invoke<AppConfig>("get_config_command");
+        if (!currentConfig.chatgpt_token) {
+          console.log("[handleMouseUp] 沒有 Token，跳過轉錄");
+          setError("請先在設定中配置 ChatGPT Token");
+          setStatus("⚠️ 錄音已保存，但未設定 Token 無法轉錄");
+          return;
+        }
+        console.log("[handleMouseUp] Token 有，開始轉錄");
+      } catch (configErr) {
+        console.log("[handleMouseUp] 檢查 Token 失敗:", configErr);
+        setError("無法檢查 Token 配置");
+        setStatus("⚠️ 錄音已保存，但無法確認 Token");
         return;
       }
 
-      // 開始轉錄流程（合併上傳和轉錄為一個步驟）
+      // 開始轉錄流程
       updateStep("transcribe", "active");
       setStatus("🔄 正在轉錄文字...");
+      setPendingCount(prev => prev + 1);
 
-      // **從這裡開始計時**（用戶真正等待的時間）
       const transcriptionStartTime = Date.now();
       setStartTime(transcriptionStartTime);
 
       try {
-        const result = await invoke<string>("transcribe_audio", { audioPath });
+        const text = await invoke<string>("transcribe_audio", { audioPath: result.audio_path });
+        console.log("[handleMouseUp] 轉錄成功:", text);
 
-        // 直接計算最終耗時
         const finalTime = Math.floor((Date.now() - transcriptionStartTime) / 1000);
         setStartTime(null);
 
+        // 檢查轉錄結果是否為空
+        const trimmedText = text.trim();
+        if (!trimmedText) {
+          setError("轉錄結果為空，請確認錄音內容");
+          setStatus("⚠️ 轉錄完成但無內容");
+          setPendingCount(prev => prev - 1);
+          return;
+        }
+
+        // 保存到歷史
+        const newRecord: TranscriptionHistory = {
+          id: Date.now().toString(),
+          text: trimmedText,
+          duration: result.duration,
+          timestamp: Date.now(),
+        };
+
+        setHistory(prev => [newRecord, ...prev].slice(0, 5));
+        setTranscriptionResult(trimmedText);
+
         updateStep("transcribe", "completed");
         updateStep("done", "completed");
-        setTranscriptionResult(result);
+
+        // 使用 Tauri clipboard API，因為快捷鍵操作時視窗可能沒有焦點
+        await invoke("copy_to_clipboard", { text: trimmedText });
         setStatus(`✓ 轉錄完成！已複製到剪貼簿 (耗時 ${formatTime(finalTime)})`);
-        console.log("轉錄結果:", result);
+
+        setPendingCount(prev => prev - 1);
       } catch (transcribeErr) {
+        console.log("[handleMouseUp] 轉錄失敗:", transcribeErr);
         setError(`轉錄失敗: ${transcribeErr}`);
         setStatus("❌ 轉錄失敗（錄音已保存）");
-        // 轉錄失敗時也要停止計時器
         setStartTime(null);
+        setPendingCount(prev => prev - 1);
       }
     } catch (err) {
-      setError(`無法停止錄音: ${err}`);
-      setStatus("❌ 停止錄音失敗");
+      console.log("[handleMouseUp] stop_recording 失敗:", err);
+      const errorMsg = String(err);
+      if (errorMsg.includes("沒有進行中的錄音會話")) {
+        const actualStatus = await invoke<RecordingStatus>("get_recording_status");
+        setRecordingStatus({
+          is_recording: actualStatus.is_recording,
+          recording_id: actualStatus.recording_id,
+        });
+        if (!actualStatus.is_recording) {
+          setError("");
+          setStatus("就緒");
+        }
+      } else {
+        setError(`無法停止錄音: ${err}`);
+        setStatus("❌ 停止錄音失敗");
+      }
       setStartTime(null);
     }
   };
@@ -232,24 +388,31 @@ function App() {
   // 格式化時間顯示
   const formatTime = (seconds: number): string => {
     if (seconds < 60) {
-      return `${seconds} 秒`;
+      return `${seconds}秒`;
     }
     const mins = Math.floor(seconds / 60);
     const secs = seconds % 60;
-    return `${mins} 分 ${secs} 秒`;
+    return `${mins}分${secs}秒`;
   };
 
-  const toggleRecording = async () => {
-    if (recordingStatus.is_recording) {
-      await stopRecording();
-    } else {
-      await startRecording();
-    }
+  // 格式化時間戳
+  const formatTimestamp = (timestamp: number): string => {
+    const date = new Date(timestamp);
+    const now = new Date();
+    const diffMs = now.getTime() - date.getTime();
+    const diffMins = Math.floor(diffMs / 60000);
+    const diffHours = Math.floor(diffMs / 3600000);
+    const diffDays = Math.floor(diffMs / 86400000);
+
+    if (diffMins < 1) return "剛剛";
+    if (diffMins < 60) return `${diffMins}分鐘前`;
+    if (diffHours < 24) return `${diffHours}小時前`;
+    return `${diffDays}天前`;
   };
 
   const saveConfig = async () => {
     try {
-      const newConfig = { ...config, chatgpt_token: tempToken };
+      const newConfig = { ...config, chatgpt_token: tempToken, audio_device: selectedDevice };
       await invoke("set_config", { config: newConfig });
       setConfig(newConfig);
       setIsSettingsOpen(false);
@@ -268,68 +431,85 @@ function App() {
     }
   };
 
+  // 新增：刪除歷史記錄
+  const deleteHistoryItem = async (id: string) => {
+    try {
+      await invoke("delete_history_item", { id });
+      setHistory(prev => prev.filter(item => item.id !== id));
+      setStatus("記錄已刪除");
+    } catch (err) {
+      setError(`刪除失敗: ${err}`);
+    }
+  };
+
+  // 新增：清空所有歷史
+  const clearAllHistory = async () => {
+    try {
+      await invoke("clear_all_history");
+      setHistory([]);
+      setStatus("歷史記錄已清空");
+    } catch (err) {
+      setError(`清空失敗: ${err}`);
+    }
+  };
+
   return (
     <div className="app">
       <header className="app-header">
-        <h1>GPTService</h1>
-        <button
-          className="settings-btn"
-          onClick={() => setIsSettingsOpen(!isSettingsOpen)}
-        >
-          <SettingsIcon />
-          <span>設定</span>
-        </button>
-      </header>
-
-      <main className="app-main">
-        {/* 錄音控制區 */}
-        <section className="control-section">
-          <div className="status-indicator">
+        <div className="header-left">
+          <h1>GPT-Typeless</h1>
+          <div className="recording-status">
             <span className={`status-dot ${recordingStatus.is_recording ? "recording" : ""}`} />
             <span className="status-text">
               {recordingStatus.is_recording ? "錄音中" : "就緒"}
             </span>
           </div>
+        </div>
 
-          <div className="device-selector">
-            <label htmlFor="device-select">錄音設備：</label>
-            <select
-              id="device-select"
-              value={selectedDevice}
-              onChange={(e) => setSelectedDevice(e.target.value)}
-              disabled={recordingStatus.is_recording}
-            >
-              {devices.map((device) => (
-                <option key={device.name} value={device.name}>
-                  {device.name} {device.is_default ? "(預設)" : ""}
-                </option>
-              ))}
-            </select>
-          </div>
+        <div className="header-right">
+          {/* 顯示處理數量 */}
+          {pendingCount > 0 && (
+            <span className="pending-badge">
+              處理中 {pendingCount}
+            </span>
+          )}
 
           <button
-            className={`record-btn ${recordingStatus.is_recording ? "recording" : ""}`}
-            onClick={toggleRecording}
+            className={`record-btn ${recordingStatus.is_recording ? "recording" : ""} ${isPressing ? "pressing" : ""}`}
+            onMouseDown={handleMouseDown}
+            onMouseUp={handleMouseUp}
+            onMouseLeave={handleMouseUp}
+            onTouchStart={(e) => { e.preventDefault(); handleMouseDown(); }}
+            onTouchEnd={(e) => { e.preventDefault(); handleMouseUp(); }}
           >
             {recordingStatus.is_recording ? (
               <>
-                <StopIcon />
-                停止錄音
+                <Square />
+                停止
               </>
             ) : (
               <>
-                <MicIcon />
-                開始錄音
+                <Mic />
+                錄音
               </>
             )}
           </button>
 
-          <p className="hotkey-hint">
-            <LightbulbIcon />
-            快捷鍵：{config.hotkey}
-          </p>
-        </section>
+          <span className="hotkey-hint">
+            <Lightbulb />
+            {config.hotkey}
+          </span>
 
+          <button
+            className="settings-btn"
+            onClick={() => setIsSettingsOpen(!isSettingsOpen)}
+          >
+            <Settings />
+          </button>
+        </div>
+      </header>
+
+      <main className="app-main">
         {/* 狀態訊息 */}
         {status && (
           <section className="status-section">
@@ -337,24 +517,38 @@ function App() {
           </section>
         )}
 
-        {/* 流程步驟 */}
+        {/* 流程步驟 - 路線圖風格 */}
         {(recordingStatus.is_recording || status.includes("錄音") || status.includes("轉錄")) && (
-          <section className="status-steps">
-            {/* 經過時間顯示 */}
+          <section className="roadmap-container">
             {startTime && (
-              <div className="elapsed-time">
-                <ClockIcon />
+              <div className="roadmap-timer">
+                <Clock />
                 已用時: {formatTime(elapsed)}
               </div>
             )}
-            {steps.map((step) => (
-              <div key={step.id} className={`status-step ${step.status}`}>
-                <span className="status-step-icon">
-                  {step.status === "completed" ? <CheckIcon /> : step.status === "active" ? "⟳" : "○"}
-                </span>
-                <span>{step.label}</span>
-              </div>
-            ))}
+            <div className="roadmap-steps">
+              {steps.map((step, index) => (
+                <div key={step.id} className={`roadmap-step ${step.status}`}>
+                  <div className="roadmap-step-content">
+                    <div className="roadmap-step-icon">
+                      {step.status === "completed" ? (
+                        <Check />
+                      ) : step.status === "active" ? (
+                        <span className="spin">⟳</span>
+                      ) : (
+                        <span className="step-number">{index + 1}</span>
+                      )}
+                    </div>
+                    <span className="roadmap-step-label">{step.label}</span>
+                  </div>
+                  {index < steps.length - 1 && (
+                    <div className={`roadmap-connector ${
+                      step.status === "completed" ? "completed" : ""
+                    }`} />
+                  )}
+                </div>
+              ))}
+            </div>
           </section>
         )}
 
@@ -363,7 +557,7 @@ function App() {
           <section className="error-section">
             <p className="error-message">{error}</p>
             <button onClick={() => setError("")}>
-              <CloseIcon />
+              <X />
             </button>
           </section>
         )}
@@ -372,15 +566,15 @@ function App() {
         {transcriptionResult && (
           <section className="transcription-section">
             <div className="transcription-header">
-              <h3><DocumentIcon /> 轉錄結果</h3>
+              <h3><FileText /> 轉錄結果</h3>
               <button
                 className="copy-result-btn"
-                onClick={() => {
-                  navigator.clipboard.writeText(transcriptionResult);
+                onClick={async () => {
+                  await invoke("copy_to_clipboard", { text: transcriptionResult });
                   setStatus("已複製到剪貼簿");
                 }}
               >
-                <CopyIcon />
+                <Copy />
                 複製
               </button>
             </div>
@@ -390,7 +584,55 @@ function App() {
           </section>
         )}
 
-        {/* 設定 Modal */}
+        {/* 新增：轉錄歷史 */}
+        {history.length > 0 && (
+          <section className="history-section">
+            <div className="history-header">
+              <h3>📜 最近轉錄記錄</h3>
+              <button
+                className="clear-history-btn"
+                onClick={clearAllHistory}
+                title="清空所有記錄"
+              >
+                清空全部
+              </button>
+            </div>
+            <div className="history-list">
+              {history.map((item) => (
+                <div key={item.id} className="history-item">
+                  <div className="history-item-main">
+                    <div className="history-item-text">
+                      {item.text}
+                    </div>
+                    <div className="history-item-meta">
+                      <span className="history-time">⏱️ {formatTime(item.duration)}</span>
+                      <span className="history-date">{formatTimestamp(item.timestamp)}</span>
+                      <button
+                        className="history-copy-btn"
+                        onClick={async () => {
+                          await invoke("copy_to_clipboard", { text: item.text });
+                          setStatus("已複製到剪貼簿");
+                        }}
+                        title="複製"
+                      >
+                        <Copy />
+                      </button>
+                      <button
+                        className="history-delete-btn"
+                        onClick={() => deleteHistoryItem(item.id)}
+                        title="刪除"
+                      >
+                        <Trash />
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </section>
+        )}
+
+        {/* 設定 Modal - 加入設備選擇 */}
         <Modal
           isOpen={isSettingsOpen}
           onClose={() => {
@@ -421,6 +663,22 @@ function App() {
             />
           </div>
 
+          {/* 新增：設備選擇 */}
+          <div className="modal-form-group">
+            <label htmlFor="device-select">錄音設備：</label>
+            <select
+              id="device-select"
+              value={selectedDevice}
+              onChange={(e) => setSelectedDevice(e.target.value)}
+            >
+              {devices.map((device) => (
+                <option key={device.name} value={device.name}>
+                  {device.name} {device.is_default ? "(預設)" : ""}
+                </option>
+              ))}
+            </select>
+          </div>
+
           <div className="modal-actions">
             <button className="modal-save-btn" onClick={saveConfig}>
               儲存設定
@@ -430,7 +688,7 @@ function App() {
           <div className="modal-cleanup-section">
             <h3>維護</h3>
             <button className="modal-cleanup-btn" onClick={cleanupOldRecordings}>
-              <TrashIcon />
+              <Trash />
               清理 7 天前的錄音
             </button>
           </div>
@@ -438,7 +696,7 @@ function App() {
       </main>
 
       <footer className="app-footer">
-        <p>GPTService v0.1.0</p>
+        <p>GPT-Typeless v0.1.0</p>
       </footer>
     </div>
   );

@@ -1,0 +1,125 @@
+/**
+ * Accessibility Styles
+ *
+ * Core accessibility features for the application
+ */
+
+/* Screen reader only content */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border-width: 0;
+}
+
+/* Reset focus outline for mouse users, keep for keyboard */
+*:focus:not(:focus-visible) {
+  outline: none;
+}
+
+/* Focus visible ring for keyboard navigation */
+*:focus-visible {
+  outline: 2px solid var(--primary-600, #2563eb);
+  outline-offset: 2px;
+}
+
+/* Skip to content link for keyboard users */
+.skip-to-content {
+  position: absolute;
+  top: -40px;
+  left: 0;
+  background: var(--primary-600, #2563eb);
+  color: white;
+  padding: 8px 16px;
+  text-decoration: none;
+  border-radius: 0 0 4px 0;
+  z-index: 100;
+}
+
+.skip-to-content:focus {
+  top: 0;
+}
+
+/* High contrast mode support */
+@media (prefers-contrast: high) {
+  * {
+    border-color: currentColor !important;
+  }
+}
+
+/* Reduced motion support */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* Ensure text has minimum contrast ratio (WCAG AA) */
+.text-primary {
+  color: var(--gray-900, #0f172a);
+}
+
+.text-secondary {
+  color: var(--gray-600, #475569);
+}
+
+.text-muted {
+  color: var(--gray-400, #94a3b8);
+}
+
+/* Link focus states */
+a:focus-visible,
+button:focus-visible {
+  outline: 2px solid var(--primary-600, #2563eb);
+  outline-offset: 2px;
+  border-radius: 2px;
+}
+
+/* Disabled state accessibility */
+[disabled],
+[aria-disabled="true"] {
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+/* Visually hidden but accessible to screen readers */
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* Ensure touch targets are at least 44x44px */
+button,
+a,
+input,
+select,
+textarea {
+  min-height: 44px;
+}
+
+@media (pointer: fine) {
+  button,
+  a,
+  input,
+  select,
+  textarea {
+    min-height: auto;
+  }
+}

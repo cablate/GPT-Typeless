@@ -1,0 +1,317 @@
+/**
+ * Utility Classes - CSS Version
+ *
+ * Provides utility classes similar to Tailwind CSS for the components
+ * These map to the design tokens defined in index.css
+ */
+
+/* ============================================
+   Flexbox & Grid
+   ============================================ */
+.flex { display: flex; }
+.flex-col { flex-direction: column; }
+.flex-row { flex-direction: row; }
+.flex-1 { flex: 1 1 0%; }
+.inline-flex { display: inline-flex; }
+.flex-wrap { flex-wrap: wrap; }
+
+.items-center { align-items: center; }
+.items-start { align-items: flex-start; }
+.items-end { align-items: flex-end; }
+.items-stretch { align-items: stretch; }
+
+.justify-center { justify-content: center; }
+.justify-start { justify-content: flex-start; }
+.justify-end { justify-content: flex-end; }
+.justify-between { justify-content: space-between; }
+
+.gap-1 { gap: var(--spacing-1); }
+.gap-2 { gap: var(--spacing-2); }
+.gap-3 { gap: var(--spacing-3); }
+.gap-4 { gap: var(--spacing-4); }
+.gap-5 { gap: var(--spacing-5); }
+.gap-6 { gap: var(--spacing-6); }
+
+/* ============================================
+   Spacing (Padding & Margin)
+   ============================================ */
+.p-1 { padding: var(--spacing-1); }
+.p-2 { padding: var(--spacing-2); }
+.p-3 { padding: var(--spacing-3); }
+.p-4 { padding: var(--spacing-4); }
+.p-5 { padding: var(--spacing-5); }
+.p-6 { padding: var(--spacing-6); }
+
+.px-3 { padding-left: var(--spacing-3); padding-right: var(--spacing-3); }
+.px-4 { padding-left: var(--spacing-4); padding-right: var(--spacing-4); }
+.px-6 { padding-left: var(--spacing-6); padding-right: var(--spacing-6); }
+
+.py-2 { padding-top: var(--spacing-2); padding-bottom: var(--spacing-2); }
+.py-3 { padding-top: var(--spacing-3); padding-bottom: var(--spacing-3); }
+.py-4 { padding-top: var(--spacing-4); padding-bottom: var(--spacing-4); }
+.py-5 { padding-top: var(--spacing-5); padding-bottom: var(--spacing-5); }
+.py-6 { padding-top: var(--spacing-6); padding-bottom: var(--spacing-6); }
+
+.pt-2 { padding-top: var(--spacing-2); }
+.pt-4 { padding-top: var(--spacing-4); }
+
+.pb-3 { padding-bottom: var(--spacing-3); }
+
+.mb-3 { margin-bottom: var(--spacing-3); }
+.mt-2 { margin-top: var(--spacing-2); }
+
+/* ============================================
+   Sizing
+   ============================================ */
+.w-full { width: 100%; }
+.w-4 { width: var(--spacing-4); }
+.w-5 { width: var(--spacing-5); }
+.max-w-sm { max-width: 24rem; }
+.max-w-md { max-width: 28rem; }
+.max-w-lg { max-width: 32rem; }
+.max-w-xl { max-width: 36rem; }
+.min-h-screen { min-height: 100vh; }
+
+.h-4 { height: var(--spacing-4); }
+.h-5 { height: var(--spacing-5); }
+.max-h-\[280px\] { max-height: 280px; }
+.h-6 { height: var(--spacing-6); }
+
+/* ============================================
+   Typography
+   ============================================ */
+.text-xs { font-size: var(--text-xs); }
+.text-sm { font-size: var(--text-sm); }
+.text-base { font-size: var(--text-base); }
+.text-md { font-size: var(--text-md); }
+.text-lg { font-size: var(--text-lg); }
+.text-xl { font-size: var(--text-xl); }
+.text-2xl { font-size: var(--text-2xl); }
+
+.font-normal { font-weight: var(--font-normal); }
+.font-medium { font-weight: var(--font-medium); }
+.font-semibold { font-weight: var(--font-semibold); }
+.font-bold { font-weight: var(--font-bold); }
+
+.text-center { text-align: center; }
+.whitespace-nowrap { white-space: nowrap; }
+.whitespace-pre-wrap { white-space: pre-wrap; }
+
+.leading-relaxed { line-height: 1.625; }
+
+/* ============================================
+   Colors
+   ============================================ */
+.text-gray-400 { color: var(--gray-400); }
+.text-gray-500 { color: var(--gray-500); }
+.text-gray-600 { color: var(--gray-600); }
+.text-gray-700 { color: var(--gray-700); }
+.text-gray-800 { color: var(--gray-800); }
+.text-gray-900 { color: var(--gray-900); }
+
+.text-white { color: #ffffff; }
+.text-primary-600 { color: var(--primary-600); }
+.text-danger-600 { color: var(--danger); }
+.text-danger-700 { color: var(--danger-dark); }
+.text-success-600 { color: var(--success); }
+.text-success-700 { color: var(--success-dark); }
+
+/* ============================================
+   Backgrounds
+   ============================================ */
+.bg-white { background-color: #ffffff; }
+.bg-gray-50 { background-color: var(--gray-50); }
+.bg-gray-100 { background-color: var(--gray-100); }
+.bg-gray-200 { background-color: var(--gray-200); }
+.bg-gray-900 { background-color: var(--gray-900); }
+
+.bg-primary-50 { background-color: var(--primary-50); }
+.bg-primary-600 { background-color: var(--primary-600); }
+
+.bg-success-50 { background-color: var(--success-light); }
+.bg-danger-50 { background-color: var(--danger-light); }
+.bg-danger-light { background-color: var(--danger-light); }
+.bg-success-light { background-color: var(--success-light); }
+
+.bg-transparent { background-color: transparent; }
+
+/* ============================================
+   Borders
+   ============================================ */
+.border { border-width: 1px; border-style: solid; }
+.border-b { border-bottom-width: 1px; border-bottom-style: solid; }
+.border-t { border-top-width: 1px; border-top-style: solid; }
+
+.border-gray-100 { border-color: var(--gray-100); }
+.border-gray-200 { border-color: var(--gray-200); }
+.border-gray-300 { border-color: var(--gray-300); }
+.border-gray-400 { border-color: var(--gray-400); }
+.border-gray-700 { border-color: var(--gray-700); }
+.border-gray-900 { border-color: var(--gray-900); }
+
+.border-primary-200 { border-color: var(--primary-200); }
+.border-primary-600 { border-color: var(--primary-600); }
+.border-success-200 { border-color: var(--success-light); }
+.border-danger-200 { border-color: var(--danger-light); }
+
+.rounded-md { border-radius: var(--radius); }
+.rounded-lg { border-radius: var(--radius-md); }
+.rounded-full { border-radius: var(--radius-full); }
+
+/* ============================================
+   Positioning
+   ============================================ */
+.relative { position: relative; }
+.absolute { position: absolute; }
+.fixed { position: fixed; }
+.inset-0 { top: 0; right: 0; bottom: 0; left: 0; }
+
+.top-1\/2 { top: 50%; }
+.right-3 { right: var(--spacing-3); }
+
+/* ============================================
+   Opacity
+   ============================================ */
+.opacity-0 { opacity: 0; }
+.opacity-25 { opacity: 0.25; }
+.opacity-50 { opacity: 0.5; }
+.opacity-75 { opacity: 0.75; }
+.opacity-100 { opacity: 1; }
+
+/* ============================================
+   Effects with opacity
+   ============================================ */
+.bg-gray-900\/50 { background-color: rgba(15, 23, 42, 0.5); }
+.bg-black\/10 { background-color: rgba(0, 0, 0, 0.1); }
+.hover\:bg-black\/10:hover { background-color: rgba(0, 0, 0, 0.1); }
+
+/* ============================================
+   Backdrop
+   ============================================ */
+.backdrop-blur-sm {
+  backdrop-filter: blur(4px);
+}
+
+/* ============================================
+   Hover states
+   ============================================ */
+.hover\:text-gray-600:hover { color: var(--gray-600); }
+.hover\:bg-gray-100:hover { background-color: var(--gray-100); }
+.hover\:bg-danger-100:hover { background-color: var(--danger-light); }
+.hover\:bg-primary-700:hover { background-color: var(--primary-700); }
+.hover\:bg-danger-700:hover { background-color: var(--danger-dark); }
+
+/* ============================================
+   Text colors - hover states
+   ============================================ */
+
+/* ============================================
+   Effects
+   ============================================ */
+.shadow-sm { box-shadow: var(--shadow-sm); }
+.shadow-md { box-shadow: var(--shadow-md); }
+.shadow-lg { box-shadow: var(--shadow-lg); }
+.shadow-xl { box-shadow: var(--shadow-xl); }
+
+/* ============================================
+   Transitions
+   ============================================ */
+.transition-colors {
+  transition-property: color, background-color, border-color;
+  transition-duration: var(--transition-base);
+  transition-timing-function: ease-out;
+}
+
+.transition-all {
+  transition-property: all;
+  transition-duration: var(--transition-base);
+  transition-timing-function: ease-out;
+}
+
+/* ============================================
+   Interactivity
+   ============================================ */
+.cursor-pointer { cursor: pointer; }
+.cursor-not-allowed { cursor: not-allowed; }
+
+.disabled,
+[disabled] {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
+/* ============================================
+   Overflow
+   ============================================ */
+.overflow-hidden { overflow: hidden; }
+.overflow-y-auto { overflow-y: auto; }
+
+/* ============================================
+   Display
+   ============================================ */
+.block { display: block; }
+.inline-block { display: inline-block; }
+.hidden { display: none; }
+
+/* ============================================
+   Flex specific
+   ============================================ */
+.flex-shrink-0 { flex-shrink: 0; }
+.flex-1 { flex: 1 1 0%; }
+
+/* ============================================
+   Grid specific
+   ============================================ */
+.grid { display: grid; }
+
+/* ============================================
+   Other utilities
+   ============================================ */
+.capitalize { text-transform: capitalize; }
+.uppercase { text-transform: uppercase; }
+.lowercase { text-transform: lowercase; }
+
+.truncate {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* ============================================
+   Transform utilities
+   ============================================ */
+.-translate-y-1\/2 {
+  transform: translateY(-50%);
+}
+
+/* ============================================
+   Animation utilities
+   ============================================ */
+.animate-spin {
+  animation: spin 1000ms linear infinite;
+}
+
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+/* ============================================
+   Z-index
+   ============================================ */
+.z-50 { z-index: 50; }
+.z-10 { z-index: 10; }
+
+/* ============================================
+   SVG specific
+   ============================================ */
+.pointer-events-none {
+  pointer-events: none;
+}
+
+/* ============================================
+   Width constraints
+   ============================================ */
+.min-w-0 {
+  min-width: 0;
+}

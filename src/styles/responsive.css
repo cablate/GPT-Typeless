@@ -1,0 +1,169 @@
+/**
+ * Responsive Styles
+ *
+ * Media queries for different viewport sizes
+ */
+
+/* Base styles */
+.gptservice-app {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+  background-color: var(--gray-50);
+}
+
+/* ============================================
+   Breakpoints
+   ============================================ */
+
+/* Extra small (360px - 400px) - Tight mode */
+@media (max-width: 400px) {
+  .gptservice-app .header,
+  .gptservice-app .footer {
+    padding: 0.75rem 1rem;
+  }
+
+  .gptservice-app .main-content {
+    padding: 0.75rem;
+  }
+
+  .gptservice-app .recording-control,
+  .gptservice-app .transcription-result,
+  .gptservice-app .settings-modal {
+    padding: 1rem;
+  }
+
+  .gptservice-app .transcription-content {
+    max-height: 200px;
+    font-size: 0.875rem;
+  }
+
+  .gptservice-app .record-button {
+    width: 100%;
+  }
+
+  .gptservice-app .progress-stepper {
+    font-size: 0.85rem;
+  }
+
+  .gptservice-app .hotkey-hint {
+    font-size: 0.75rem;
+  }
+
+  .gptservice-app .timer-display {
+    font-size: 0.8rem;
+  }
+}
+
+/* Small (400px - 600px) */
+@media (min-width: 400px) and (max-width: 600px) {
+  .gptservice-app .main-content {
+    padding: 1rem 1.5rem;
+  }
+}
+
+/* Medium (600px+) - Default styles apply */
+
+/* ============================================
+   Height breakpoints
+   ============================================ */
+
+/* Short window (550px or less) */
+@media (max-height: 550px) {
+  .gptservice-app .footer {
+    display: none;
+  }
+
+  .gptservice-app .header {
+    padding: 1rem;
+  }
+
+  .gptservice-app .main-content {
+    padding: 1rem;
+  }
+
+  .gptservice-app .recording-control,
+  .gptservice-app .transcription-result {
+    padding: 1rem;
+  }
+
+  .gptservice-app .transcription-content {
+    max-height: 150px;
+  }
+
+  .gptservice-app .hotkey-hint {
+    display: none;
+  }
+}
+
+/* Very short window (450px or less) */
+@media (max-height: 450px) {
+  .gptservice-app .recording-control {
+    padding: 0.75rem;
+  }
+
+  .gptservice-app .transcription-result {
+    padding: 0.75rem;
+  }
+
+  .gptservice-app .transcription-content {
+    max-height: 120px;
+    font-size: 0.85rem;
+  }
+
+  .gptservice-app .progress-stepper {
+    padding: 0.5rem;
+  }
+
+  .gptservice-app .timer-display {
+    font-size: 0.8rem;
+    padding: 0.25rem 0.5rem;
+  }
+}
+
+/* ============================================
+   Horizontal layout for larger windows
+   ============================================ */
+@media (min-width: 500px) and (min-height: 500px) {
+  .gptservice-app .progress-stepper {
+    flex-direction: row;
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+}
+
+/* ============================================
+   Touch target optimization
+   ============================================ */
+@media (pointer: coarse) {
+  .gptservice-app button,
+  .gptservice-app input,
+  .gptservice-app select {
+    min-height: 44px;
+  }
+}
+
+/* ============================================
+   Dark mode support (optional)
+   ============================================ */
+@media (prefers-color-scheme: dark) {
+  .gptservice-app {
+    background-color: var(--gray-900);
+  }
+
+  .gptservice-app .header,
+  .gptservice-app .footer {
+    background-color: var(--gray-800);
+    border-color: var(--gray-700);
+  }
+
+  .gptservice-app .recording-control,
+  .gptservice-app .transcription-result {
+    background-color: var(--gray-800);
+    border-color: var(--gray-700);
+  }
+
+  .gptservice-app .header h1 {
+    color: var(--gray-100);
+  }
+}
