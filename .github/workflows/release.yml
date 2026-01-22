@@ -24,5 +24,11 @@ jobs:
 
       - name: Build Tauri app
         uses: tauri-apps/tauri-action@v0
+        with:
+          tagName: ${{ github.ref_name }}
+          releaseName: 'GPT-Typeless ${{ github.ref_name }}'
+          releaseBody: 'See [CHANGELOG.md](https://github.com/cablate/GPT-Typeless/blob/master/CHANGELOG.md) for details.'
+          releaseDraft: false
+          prerelease: false
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
