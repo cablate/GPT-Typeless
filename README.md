@@ -5,8 +5,8 @@
 **一鍵錄音，即時轉錄** — 將您的語音快速轉換為文字
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
-[![Build Status](https://img.shields.io/github/actions/workflow/status/user/gptservice-tauri/build.yml)](https://github.com/user/gptservice-tauri/actions)
-[![Release](https://img.shields.io/github/v/release/user/gptservice-tauri)](https://github.com/user/gptservice-tauri/releases)
+[![Build Status](https://img.shields.io/github/actions/workflow/status/cablate/GPT-Typeless/release.yml)](https://github.com/cablate/GPT-Typeless/actions)
+[![Release](https://img.shields.io/github/v/release/cablate/GPT-Typeless)](https://github.com/cablate/GPT-Typeless/releases)
 
 [功能](#-功能) · [快速開始](#-快速開始) · [安裝](#-安裝) · [配置](#-配置)
 
@@ -33,11 +33,11 @@
 
 ---
 
-<!-- ## 🚀 快速開始
+## 🚀 快速開始
 
-1. **下載** — 從 [Releases](https://github.com/user/gptservice-tauri/releases) 下載最新版本
+1. **下載** — 從 [Releases](https://github.com/cablate/GPT-Typeless/releases) 下載最新版本
 2. **配置 Token** — 在設定中輸入您的 ChatGPT Token
-3. **開始錄音** — 按 `Ctrl+Shift+R` 或點擊開始錄音 -->
+3. **開始錄音** — 按 `Ctrl+Shift+R` 或點擊開始錄音
 
 ## 📦 安裝
 
@@ -54,8 +54,8 @@ gptservice-win.exe
 ### 從源碼構建
 
 ```bash
-git clone https://github.com/user/gptservice-tauri.git
-cd gptservice-tauri
+git clone https://github.com/cablate/GPT-Typeless.git
+cd GPT-Typeless
 npm install
 npm run tauri build
 ```
