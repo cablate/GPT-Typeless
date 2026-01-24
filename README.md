@@ -14,9 +14,7 @@
 
 <div align="center">
 
-<p align="center">
-  <video src="public/demo.mp4" width="600" autoplay loop muted playsinline></video>
-</p>
+![Demo](public/demo.gif)
 
 </div>
 
