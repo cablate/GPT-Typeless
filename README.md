@@ -56,7 +56,7 @@
 
 **前置要求：**
 
-- Node.js 18+
+- Node.js 22+
 - Rust 1.70+
 - Windows 10+ (目前僅支援 Windows)
 
